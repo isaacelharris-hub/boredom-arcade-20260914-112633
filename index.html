@@ -1,0 +1,2914 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+>
+
+<title>World Atlas — Boredom Arcade</title>
+
+<meta
+    name="description"
+    content="A premium interactive world atlas. Explore every country, compare nations and discover global statistics."
+>
+
+<style>
+
+:root{
+    --bg:#f5f5f2;
+    --ink:#111;
+    --muted:#777;
+    --line:rgba(17,17,17,.1);
+    --glass:rgba(255,255,255,.72);
+    --shadow:0 22px 70px rgba(0,0,0,.12);
+    --ease:cubic-bezier(.22,1,.36,1);
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+button,
+input{
+    font:inherit;
+}
+
+button{
+    cursor:pointer;
+}
+
+body:before{
+    content:"";
+    position:fixed;
+    inset:-20%;
+    pointer-events:none;
+    background:
+        radial-gradient(
+            circle at 50% 45%,
+            rgba(255,255,255,.95),
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(220,220,214,.5),
+            transparent 30%
+        );
+    z-index:-1;
+}
+
+#app{
+    position:fixed;
+    inset:0;
+}
+
+.topbar{
+    position:fixed;
+    top:18px;
+    left:18px;
+    right:18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    z-index:20;
+    pointer-events:none;
+}
+
+.brand,
+.status,
+.search{
+    pointer-events:auto;
+    background:var(--glass);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
+    border:1px solid rgba(255,255,255,.85);
+    box-shadow:0 10px 35px rgba(0,0,0,.07);
+}
+
+.brand{
+    padding:11px 15px;
+    border-radius:16px;
+    line-height:1;
+}
+
+.brand small{
+    display:block;
+    font-size:9px;
+    letter-spacing:.18em;
+    font-weight:800;
+    color:#8b8b86;
+    margin-bottom:5px;
+}
+
+.brand strong{
+    font-size:13px;
+    letter-spacing:.04em;
+}
+
+.status{
+    padding:10px 13px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.1em;
+    color:#555;
+}
+
+.status b{
+    display:inline-block;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#111;
+    margin-right:7px;
+}
+
+.searchWrap{
+    position:fixed;
+    top:18px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(430px,calc(100vw - 150px));
+    z-index:22;
+}
+
+.search{
+    height:48px;
+    border-radius:16px;
+    display:flex;
+    align-items:center;
+    padding:0 14px;
+    gap:10px;
+}
+
+.search svg{
+    width:17px;
+    flex:none;
+    color:#777;
+}
+
+.search input{
+    width:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#111;
+    font-size:13px;
+}
+
+.kbd{
+    font-size:10px;
+    color:#999;
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:4px 6px;
+    white-space:nowrap;
+}
+
+#globe{
+    position:absolute;
+    inset:0;
+}
+
+.loading{
+    position:fixed;
+    inset:0;
+    display:grid;
+    place-items:center;
+    z-index:30;
+    background:rgba(245,245,242,.82);
+    backdrop-filter:blur(16px);
+    transition:opacity .5s var(--ease);
+}
+
+.loading.hidden{
+    opacity:0;
+    pointer-events:none;
+}
+
+.loaderBox{
+    text-align:center;
+}
+
+.spinner{
+    width:30px;
+    height:30px;
+    border:2px solid #ddd;
+    border-top-color:#111;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+    margin:0 auto 14px;
+}
+
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.loaderBox strong{
+    display:block;
+    font-size:13px;
+}
+
+.loaderBox span{
+    display:block;
+    color:#888;
+    font-size:11px;
+    margin-top:5px;
+}
+
+.panel{
+    position:fixed;
+    top:18px;
+    right:18px;
+    bottom:18px;
+    width:min(430px,calc(100vw - 36px));
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(28px);
+    -webkit-backdrop-filter:blur(28px);
+    border:1px solid rgba(255,255,255,.9);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+    z-index:25;
+    transform:translateX(calc(100% + 30px));
+    transition:transform .65s var(--ease);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+}
+
+.panel.open{
+    transform:translateX(0);
+}
+
+.panelHead{
+    padding:18px 18px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+}
+
+.countryTitle{
+    display:flex;
+    gap:12px;
+    align-items:center;
+}
+
+.flag{
+    width:46px;
+    height:32px;
+    object-fit:cover;
+    border-radius:7px;
+    background:#eee;
+    box-shadow:0 3px 12px rgba(0,0,0,.1);
+}
+
+.eyebrow{
+    font-size:9px;
+    letter-spacing:.15em;
+    color:#999;
+    font-weight:800;
+    text-transform:uppercase;
+}
+
+.countryTitle h2{
+    font-size:22px;
+    margin:3px 0 0;
+    letter-spacing:-.03em;
+}
+
+.close{
+    width:32px;
+    height:32px;
+    border:0;
+    border-radius:10px;
+    background:#f0f0ed;
+    color:#555;
+}
+
+.panelBody{
+    overflow:auto;
+    padding:18px;
+}
+
+.heroStat{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:12px;
+}
+
+.card{
+    background:rgba(247,247,244,.86);
+    border:1px solid var(--line);
+    border-radius:15px;
+    padding:13px;
+}
+
+.card label{
+    display:block;
+    font-size:9px;
+    color:#999;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    font-weight:800;
+}
+
+.card strong{
+    display:block;
+    font-size:18px;
+    margin-top:5px;
+    letter-spacing:-.03em;
+}
+
+.sectionTitle{
+    font-size:10px;
+    letter-spacing:.13em;
+    color:#999;
+    text-transform:uppercase;
+    font-weight:900;
+    margin:20px 0 9px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    border:1px solid var(--line);
+    border-radius:15px;
+    overflow:hidden;
+}
+
+.kv{
+    background:rgba(255,255,255,.58);
+    padding:11px 12px;
+    min-width:0;
+}
+
+.kv span{
+    display:block;
+    color:#999;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:800;
+}
+
+.kv b{
+    display:block;
+    font-size:12px;
+    margin-top:4px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.actions{
+    display:flex;
+    gap:8px;
+    margin-top:15px;
+}
+
+.primary,
+.secondary{
+    border:0;
+    border-radius:12px;
+    padding:11px 14px;
+    font-size:11px;
+    font-weight:800;
+    transition:
+        transform .2s,
+        box-shadow .2s;
+}
+
+.primary{
+    background:#111;
+    color:#fff;
+    box-shadow:0 8px 20px rgba(0,0,0,.13);
+}
+
+.secondary{
+    background:#eee;
+    color:#222;
+}
+
+.primary:hover,
+.secondary:hover{
+    transform:translateY(-1px);
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(15,15,15,.2);
+    backdrop-filter:blur(10px);
+    z-index:40;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .35s;
+}
+
+.modal.open{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.compareBox{
+    width:min(900px,calc(100vw - 28px));
+    max-height:min(720px,calc(100vh - 28px));
+    background:rgba(255,255,255,.94);
+    border:1px solid rgba(255,255,255,.95);
+    border-radius:24px;
+    box-shadow:0 30px 100px rgba(0,0,0,.2);
+    overflow:hidden;
+    transform:translateY(15px) scale(.98);
+    transition:transform .45s var(--ease);
+    display:flex;
+    flex-direction:column;
+}
+
+.modal.open .compareBox{
+    transform:none;
+}
+
+.compareTop{
+    padding:18px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.compareTop h3{
+    margin:0;
+    font-size:18px;
+    letter-spacing:-.03em;
+}
+
+.modalClose{
+    border:0;
+    background:#eee;
+    border-radius:10px;
+    width:34px;
+    height:34px;
+}
+
+.picker{
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+}
+
+.picker input{
+    width:100%;
+    height:42px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:0 13px;
+    outline:0;
+    background:#fafaf8;
+}
+
+.countryList{
+    overflow:auto;
+    padding:8px 18px 18px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:7px;
+}
+
+.countryOption{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px;
+    border:1px solid transparent;
+    border-radius:11px;
+    background:#f6f6f3;
+    text-align:left;
+}
+
+.countryOption:hover{
+    border-color:#ddd;
+    transform:translateY(-1px);
+}
+
+.countryOption img{
+    width:28px;
+    height:19px;
+    object-fit:cover;
+    border-radius:4px;
+}
+
+.countryOption b{
+    font-size:11px;
+    display:block;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.countryOption span{
+    font-size:9px;
+    color:#999;
+}
+
+.compareView{
+    display:none;
+    overflow:auto;
+    padding:18px;
+}
+
+.compareView.show{
+    display:block;
+}
+
+.compareGrid{
+    display:grid;
+    grid-template-columns:180px 1fr 1fr;
+    border:1px solid var(--line);
+    border-radius:15px;
+    overflow:hidden;
+}
+
+.compareGrid>div{
+    padding:11px;
+    border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);
+    font-size:11px;
+}
+
+.compareGrid .head{
+    font-weight:900;
+    font-size:13px;
+    background:#f6f6f3;
+}
+
+.compareGrid .metric{
+    color:#888;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+}
+
+.tooltip{
+    position:fixed;
+    z-index:35;
+    pointer-events:none;
+    background:rgba(17,17,17,.92);
+    color:white;
+    border-radius:11px;
+    padding:8px 10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    opacity:0;
+    transform:translate(10px,10px);
+    transition:opacity .15s;
+}
+
+.tooltip.show{
+    opacity:1;
+}
+
+.tooltip strong{
+    font-size:11px;
+}
+
+.tooltip span{
+    font-size:9px;
+    color:#aaa;
+    display:block;
+    margin-top:2px;
+}
+
+.error{
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    z-index:50;
+    width:min(440px,calc(100vw - 32px));
+    background:rgba(255,255,255,.94);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:22px;
+    box-shadow:var(--shadow);
+    display:none;
+}
+
+.error.show{
+    display:block;
+}
+
+.error h3{
+    margin:0 0 7px;
+    font-size:18px;
+}
+
+.error p{
+    margin:0;
+    color:#777;
+    font-size:12px;
+    line-height:1.5;
+}
+
+.error button{
+    margin-top:15px;
+    border:0;
+    background:#111;
+    color:#fff;
+    padding:10px 13px;
+    border-radius:10px;
+    font-weight:800;
+    font-size:11px;
+}
+
+@media(max-width:700px){
+
+    .topbar{
+        top:10px;
+        left:10px;
+        right:10px;
+    }
+
+    .brand{
+        padding:9px 11px;
+    }
+
+    .status{
+        display:none;
+    }
+
+    .searchWrap{
+        top:10px;
+        width:calc(100vw - 130px);
+    }
+
+    .search{
+        height:43px;
+    }
+
+    .panel{
+        top:auto;
+        left:10px;
+        right:10px;
+        bottom:10px;
+        width:auto;
+        height:min(72vh,600px);
+        border-radius:22px;
+    }
+
+    .countryList{
+        grid-template-columns:1fr 1fr;
+    }
+
+    .compareGrid{
+        grid-template-columns:105px 1fr 1fr;
+    }
+
+    .compareGrid>div{
+        font-size:10px;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="app">
+
+    <div id="globe"></div>
+
+    <div class="topbar">
+
+        <div class="brand">
+            <small>BOREDOM ARCADE</small>
+            <strong>WORLD ATLAS</strong>
+        </div>
+
+        <div class="status" id="status">
+            <b></b>
+            <span>CONNECTING</span>
+        </div>
+
+    </div>
+
+
+    <div class="searchWrap">
+
+        <div class="search">
+
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+            >
+                <circle
+                    cx="11"
+                    cy="11"
+                    r="7"
+                ></circle>
+
+                <path
+                    d="m20 20-4-4"
+                ></path>
+
+            </svg>
+
+            <input
+                id="search"
+                placeholder="Search any country…"
+                autocomplete="off"
+            >
+
+            <span class="kbd">/</span>
+
+        </div>
+
+    </div>
+
+
+    <aside
+        class="panel"
+        id="panel"
+    >
+
+        <div class="panelHead">
+
+            <div class="countryTitle">
+
+                <img
+                    class="flag"
+                    id="panelFlag"
+                    alt=""
+                >
+
+                <div>
+
+                    <div
+                        class="eyebrow"
+                        id="panelEyebrow"
+                    >
+                        COUNTRY
+                    </div>
+
+                    <h2 id="panelName">—</h2>
+
+                </div>
+
+            </div>
+
+            <button
+                class="close"
+                id="closePanel"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            class="panelBody"
+            id="panelBody"
+        >
+
+            <div class="heroStat">
+
+                <div class="card">
+
+                    <label>
+                        Population
+                    </label>
+
+                    <strong id="pop">
+                        —
+                    </strong>
+
+                </div>
+
+                <div class="card">
+
+                    <label>
+                        Area
+                    </label>
+
+                    <strong id="area">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="actions">
+
+                <button
+                    class="primary"
+                    id="compareBtn"
+                >
+                    Compare to…
+                </button>
+
+                <button
+                    class="secondary"
+                    id="resetBtn"
+                >
+                    Reset view
+                </button>
+
+            </div>
+
+
+            <div class="sectionTitle">
+                Geography & identity
+            </div>
+
+            <div
+                class="grid"
+                id="geoGrid"
+            ></div>
+
+
+            <div class="sectionTitle">
+                Economy
+            </div>
+
+            <div
+                class="grid"
+                id="econGrid"
+            >
+
+                <div class="kv">
+                    <span>GDP</span>
+                    <b id="gdp">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>GDP / capita</span>
+                    <b id="gdppc">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>GDP growth</span>
+                    <b id="growth">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>Inflation</span>
+                    <b id="inflation">Loading…</b>
+                </div>
+
+            </div>
+
+
+            <div class="sectionTitle">
+                Society & digital
+            </div>
+
+            <div
+                class="grid"
+                id="socGrid"
+            >
+
+                <div class="kv">
+                    <span>Life expectancy</span>
+                    <b id="life">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>Unemployment</span>
+                    <b id="unemployment">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>Internet users</span>
+                    <b id="internet">Loading…</b>
+                </div>
+
+                <div class="kv">
+                    <span>Trade / GDP</span>
+                    <b id="trade">Loading…</b>
+                </div>
+
+            </div>
+
+
+            <div class="sectionTitle">
+                Political profile
+            </div>
+
+            <div
+                class="card"
+                id="politics"
+            >
+                Loading political profile…
+            </div>
+
+
+            <div class="sectionTitle">
+                Overview
+            </div>
+
+            <div
+                class="card"
+                id="overview"
+            >
+                Loading country overview…
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <div
+        class="tooltip"
+        id="tooltip"
+    >
+
+        <strong id="tipName"></strong>
+
+        <span id="tipRegion"></span>
+
+    </div>
+
+
+    <div
+        class="modal"
+        id="modal"
+    >
+
+        <div class="compareBox">
+
+            <div class="compareTop">
+
+                <h3>
+                    Compare countries
+                </h3>
+
+                <button
+                    class="modalClose"
+                    id="modalClose"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div
+                class="picker"
+                id="picker"
+            >
+
+                <input
+                    id="compareSearch"
+                    placeholder="Search for a country…"
+                >
+
+            </div>
+
+
+            <div
+                class="countryList"
+                id="countryList"
+            ></div>
+
+
+            <div
+                class="compareView"
+                id="compareView"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        class="loading"
+        id="loading"
+    >
+
+        <div class="loaderBox">
+
+            <div class="spinner"></div>
+
+            <strong>
+                Building the atlas
+            </strong>
+
+            <span id="loadingText">
+                Loading world geography…
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div
+        class="error"
+        id="error"
+    >
+
+        <h3>
+            Atlas unavailable
+        </h3>
+
+        <p id="errorText"></p>
+
+        <button
+            onclick="location.reload()"
+        >
+            Refresh atlas
+        </button>
+
+    </div>
+
+</div>
+
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+<script src="https://unpkg.com/globe.gl@2.34.0/dist/globe.gl.min.js"></script>
+
+
+<script>
+
+(() => {
+
+"use strict";
+
+
+const GEO_URLS = [
+
+    "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson",
+
+    "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson",
+
+    "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json"
+
+];
+
+
+const COUNTRIES_URLS = [
+
+    "https://restcountries.com/v3.1/all?fields=name,cca2,cca3,capital,region,subregion,population,area,currencies,languages,unMember,continents,timezones,borders,flags,latlng,landlocked",
+
+    "https://restcountries.com/v3.1/all"
+
+];
+
+
+const $ = id => document.getElementById(id);
+
+
+const state = {
+
+    countries: [],
+
+    by3: new Map(),
+
+    by2: new Map(),
+
+    features: [],
+
+    featureCountry: new Map(),
+
+    selected: null,
+
+    globe: null,
+
+    materials: new Map(),
+
+    activeCompare: null
+
+};
+
+
+function setLoading(text){
+
+    $("loadingText").textContent = text;
+
+}
+
+
+function setStatus(text){
+
+    $("status").querySelector("span").textContent = text;
+
+}
+
+
+function showError(msg){
+
+    $("errorText").textContent = msg;
+
+    $("error").classList.add("show");
+
+    $("loading").classList.add("hidden");
+
+}
+
+
+async function fetchJSON(url, ms=18000){
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(
+        () => controller.abort(),
+        ms
+    );
+
+    try{
+
+        const r = await fetch(
+            url,
+            {
+                signal:controller.signal,
+                cache:"no-store"
+            }
+        );
+
+        if(!r.ok){
+            throw new Error(
+                "HTTP " + r.status
+            );
+        }
+
+        return await r.json();
+
+    }finally{
+
+        clearTimeout(timer);
+
+    }
+
+}
+
+
+async function firstJSON(urls, validator){
+
+    let last = null;
+
+    for(const url of urls){
+
+        try{
+
+            const data = await fetchJSON(url);
+
+            if(
+                !validator ||
+                validator(data)
+            ){
+                return data;
+            }
+
+        }catch(e){
+
+            last = e;
+
+        }
+
+    }
+
+    throw last ||
+        new Error(
+            "No data source succeeded."
+        );
+
+}
+
+
+function iso3OfFeature(f){
+
+    const p =
+        f && f.properties
+            ? f.properties
+            : {};
+
+    const candidates = [
+
+        p.ISO_A3,
+        p.iso_a3,
+        p.ISO3,
+        p.iso3,
+        p.ADM0_A3,
+        p.SOV_A3,
+        p.WB_A3,
+        p.GU_A3,
+        f.id
+
+    ];
+
+    for(const x of candidates){
+
+        if(
+            x &&
+            x !== "-99"
+        ){
+
+            return String(x).toUpperCase();
+
+        }
+
+    }
+
+    return "";
+
+}
+
+
+function normalizeCountry(c){
+
+    const name =
+        c.name &&
+        typeof c.name === "object"
+            ? (
+                c.name.common ||
+                c.name.official
+            )
+            : c.name;
+
+    return {
+
+        ...c,
+
+        commonName:
+            name || "Unknown"
+
+    };
+
+}
+
+
+function fmtNum(n){
+
+    return Number.isFinite(Number(n))
+        ? new Intl.NumberFormat(
+            "en-US"
+        ).format(Number(n))
+        : "—";
+
+}
+
+
+function fmtArea(n){
+
+    return Number.isFinite(Number(n))
+        ? new Intl.NumberFormat(
+            "en-US",
+            {
+                maximumFractionDigits:0
+            }
+        ).format(Number(n)) + " km²"
+        : "—";
+
+}
+
+
+function fmtPct(n){
+
+    return Number.isFinite(Number(n))
+        ? Number(n).toFixed(1) + "%"
+        : "—";
+
+}
+
+
+function fmtMoney(n){
+
+    const x = Number(n);
+
+    if(!Number.isFinite(x)){
+        return "—";
+    }
+
+    if(Math.abs(x) >= 1e12){
+        return "$" +
+            (x / 1e12).toFixed(2) +
+            "T";
+    }
+
+    if(Math.abs(x) >= 1e9){
+        return "$" +
+            (x / 1e9).toFixed(2) +
+            "B";
+    }
+
+    if(Math.abs(x) >= 1e6){
+        return "$" +
+            (x / 1e6).toFixed(1) +
+            "M";
+    }
+
+    return "$" +
+        fmtNum(Math.round(x));
+
+}
+
+
+function esc(s){
+
+    return String(
+        s ?? ""
+    ).replace(
+        /[&<>"']/g,
+        m => ({
+            "&":"&amp;",
+            "<":"&lt;",
+            ">":"&gt;",
+            '"':"&quot;",
+            "'":"&#39;"
+        }[m])
+    );
+
+}
+
+
+function flagURL(c){
+
+    return (
+        c.flags &&
+        (
+            c.flags.svg ||
+            c.flags.png
+        )
+    ) ||
+    (
+        c.cca2
+            ? "https://flagcdn.com/w320/" +
+              String(c.cca2).toLowerCase() +
+              ".png"
+            : ""
+    );
+
+}
+
+
+async function loadWorld(){
+
+    setLoading(
+        "Loading world geography…"
+    );
+
+
+    const geoPromise =
+        firstJSON(
+            GEO_URLS,
+            d =>
+                d &&
+                d.type === "FeatureCollection" &&
+                Array.isArray(d.features) &&
+                d.features.length > 100
+        );
+
+
+    const countryPromise =
+        firstJSON(
+            COUNTRIES_URLS,
+            d =>
+                Array.isArray(d) &&
+                d.length > 150
+        );
+
+
+    const results =
+        await Promise.allSettled(
+            [
+                geoPromise,
+                countryPromise
+            ]
+        );
+
+
+    if(
+        results[1].status ===
+        "fulfilled"
+    ){
+
+        state.countries =
+            results[1].value
+                .map(normalizeCountry)
+                .filter(c => c.cca3);
+
+        state.by3 =
+            new Map(
+                state.countries.map(
+                    c => [
+                        String(
+                            c.cca3
+                        ).toUpperCase(),
+                        c
+                    ]
+                )
+            );
+
+        state.by2 =
+            new Map(
+                state.countries
+                    .filter(c => c.cca2)
+                    .map(
+                        c => [
+                            String(
+                                c.cca2
+                            ).toUpperCase(),
+                            c
+                        ]
+                    )
+            );
+
+    }
+
+
+    if(
+        results[0].status ===
+        "fulfilled"
+    ){
+
+        state.features =
+            results[0].value.features;
+
+    }
+
+
+    if(!state.features.length){
+
+        throw new Error(
+            "The geography providers did not return a usable country map."
+        );
+
+    }
+
+
+    if(!state.countries.length){
+
+        state.countries =
+            state.features
+                .map(
+                    f => ({
+                        cca3:
+                            iso3OfFeature(f),
+
+                        commonName:
+                            f.properties?.ADMIN ||
+                            f.properties?.NAME ||
+                            "Country",
+
+                        region:"",
+                        subregion:"",
+                        population:null,
+                        area:null
+                    })
+                )
+                .filter(
+                    c => c.cca3
+                );
+
+
+        state.by3 =
+            new Map(
+                state.countries.map(
+                    c => [
+                        c.cca3,
+                        c
+                    ]
+                )
+            );
+
+    }
+
+
+    for(
+        const f of state.features
+    ){
+
+        const c =
+            state.by3.get(
+                iso3OfFeature(f)
+            );
+
+        if(c){
+
+            state.featureCountry.set(
+                f,
+                c
+            );
+
+        }
+
+    }
+
+}
+
+
+function makeGlobe(){
+
+    const globe =
+        Globe()(
+            document.getElementById(
+                "globe"
+            )
+        )
+
+        .backgroundColor(
+            "rgba(0,0,0,0)"
+        )
+
+        .showAtmosphere(true)
+
+        .atmosphereColor(
+            "#d8d8d2"
+        )
+
+        .atmosphereAltitude(
+            0.12
+        )
+
+        .polygonsData(
+            state.features
+        )
+
+        .polygonGeoJsonGeometry(
+            d => d.geometry
+        )
+
+        .polygonAltitude(
+            d =>
+                state.featureCountry.get(d) ===
+                state.selected
+                    ? 0.045
+                    : 0.008
+        )
+
+        .polygonCapColor(
+            d => {
+
+                const c =
+                    state.featureCountry.get(d);
+
+                return c &&
+                    state.selected === c
+                        ? "#ffffff"
+                        : "#c9c9c4";
+
+            }
+        )
+
+        .polygonSideColor(
+            () =>
+                "rgba(70,70,70,.12)"
+        )
+
+        .polygonStrokeColor(
+            () =>
+                "rgba(255,255,255,.8)"
+        )
+
+        .polygonLabel(
+            d => {
+
+                const c =
+                    state.featureCountry.get(d);
+
+                return c
+                    ? `
+                        <b>${esc(c.commonName)}</b>
+                        <br>
+                        <span style="opacity:.6">
+                            ${esc(
+                                c.region ||
+                                c.continents?.[0] ||
+                                ""
+                            )}
+                        </span>
+                    `
+                    : "";
+
+            }
+        )
+
+        .onPolygonHover(
+            d => {
+
+                const c =
+                    d
+                        ? state.featureCountry.get(d)
+                        : null;
+
+
+                document.body.style.cursor =
+                    c
+                        ? "pointer"
+                        : "";
+
+
+                if(c){
+
+                    $("tipName").textContent =
+                        c.commonName;
+
+                    $("tipRegion").textContent =
+                        c.region ||
+                        c.continents?.[0] ||
+                        "";
+
+                    $("tooltip")
+                        .classList
+                        .add("show");
+
+
+                    globe.polygonAltitude(
+                        x => {
+
+                            const xc =
+                                state.featureCountry.get(x);
+
+                            if(
+                                xc === c ||
+                                xc === state.selected
+                            ){
+
+                                return 0.045;
+
+                            }
+
+                            return 0.008;
+
+                        }
+                    );
+
+
+                    if(c.cca2){
+                        applyFlag(c);
+                    }
+
+                }else{
+
+                    $("tooltip")
+                        .classList
+                        .remove("show");
+
+
+                    globe.polygonAltitude(
+                        x =>
+                            state.featureCountry.get(x) ===
+                            state.selected
+                                ? 0.045
+                                : 0.008
+                    );
+
+                }
+
+            }
+        )
+
+        .onPolygonClick(
+            d => {
+
+                const c =
+                    state.featureCountry.get(d);
+
+                if(c){
+                    selectCountry(c);
+                }
+
+            }
+        );
+
+
+    state.globe = globe;
+
+
+    globe.controls().autoRotate = true;
+
+    globe.controls().autoRotateSpeed =
+        0.28;
+
+    globe.controls().enableDamping =
+        true;
+
+
+    window.addEventListener(
+        "mousemove",
+        e => {
+
+            $("tooltip").style.left =
+                (e.clientX + 12) + "px";
+
+            $("tooltip").style.top =
+                (e.clientY + 12) + "px";
+
+        }
+    );
+
+
+    window.addEventListener(
+        "resize",
+        () =>
+            globe
+                .width(window.innerWidth)
+                .height(window.innerHeight)
+    );
+
+}
+
+
+function applyFlag(c){
+
+    if(
+        !c.cca2 ||
+        state.materials.has(c.cca2)
+    ){
+
+        return;
+
+    }
+
+
+    const url =
+        flagURL(c);
+
+
+    if(!url){
+        return;
+    }
+
+
+    const loader =
+        new THREE.TextureLoader();
+
+
+    loader.setCrossOrigin(
+        "anonymous"
+    );
+
+
+    loader.load(
+
+        url,
+
+        texture => {
+
+            if(
+                THREE.SRGBColorSpace
+            ){
+
+                texture.colorSpace =
+                    THREE.SRGBColorSpace;
+
+            }
+
+
+            const material =
+                new THREE.MeshBasicMaterial(
+                    {
+                        map:texture,
+                        transparent:true,
+                        side:THREE.DoubleSide
+                    }
+                );
+
+
+            state.materials.set(
+                c.cca2,
+                material
+            );
+
+
+            if(state.globe){
+
+                state.globe
+                    .polygonCapMaterial(
+                        d => {
+
+                            const fc =
+                                state.featureCountry.get(d);
+
+                            if(
+                                fc &&
+                                fc.cca2 === c.cca2
+                            ){
+
+                                return material;
+
+                            }
+
+                            return null;
+
+                        }
+                    );
+
+            }
+
+        },
+
+        undefined,
+
+        () => {}
+
+    );
+
+}
+
+
+async function loadWorldBank(c){
+
+    const iso =
+        c.cca3;
+
+
+    if(!iso){
+        return {};
+    }
+
+
+    const inds = [
+
+        "NY.GDP.MKTP.CD",
+        "NY.GDP.PCAP.CD",
+        "NY.GDP.MKTP.KD.ZG",
+        "FP.CPI.TOTL.ZG",
+        "SL.UEM.TOTL.ZS",
+        "SP.DYN.LE00.IN",
+        "IT.NET.USER.ZS",
+        "NE.TRD.GNFS.ZS"
+
+    ];
+
+
+    const url =
+        "https://api.worldbank.org/v2/country/" +
+        encodeURIComponent(iso) +
+        "/indicator/" +
+        inds.join(";") +
+        "?format=json&per_page=100";
+
+
+    try{
+
+        const d =
+            await fetchJSON(
+                url,
+                12000
+            );
+
+
+        const rows =
+            Array.isArray(d) &&
+            Array.isArray(d[1])
+                ? d[1]
+                : [];
+
+
+        const out = {};
+
+
+        for(
+            const row of rows
+        ){
+
+            if(
+                row.value != null &&
+                out[row.indicator?.id] == null
+            ){
+
+                out[
+                    row.indicator.id
+                ] = row.value;
+
+            }
+
+        }
+
+
+        return out;
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+
+async function loadOverview(c){
+
+    try{
+
+        const slug =
+            (c.commonName || "")
+                .replace(
+                    /\s+/g,
+                    "_"
+                );
+
+
+        const d =
+            await fetchJSON(
+                "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+                encodeURIComponent(slug),
+                10000
+            );
+
+
+        return d.extract || "";
+
+    }catch(e){
+
+        return "";
+
+    }
+
+}
+
+
+async function loadPolitics(c){
+
+    try{
+
+        const search =
+            await fetchJSON(
+                "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" +
+                encodeURIComponent(c.commonName) +
+                "&language=en&format=json&origin=*&limit=1",
+                10000
+            );
+
+
+        const id =
+            search?.search?.[0]?.id;
+
+
+        if(!id){
+
+            return "";
+
+        }
+
+
+        const d =
+            await fetchJSON(
+                "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=" +
+                encodeURIComponent(id) +
+                "&props=claims&format=json&origin=*",
+                10000
+            );
+
+
+        const claim =
+            d?.entities?.[id]?.claims?.P122?.[0]?.mainsnak?.datavalue?.value;
+
+
+        const qid =
+            claim?.id;
+
+
+        if(!qid){
+
+            return "Government-structure data is not available for this country.";
+
+        }
+
+
+        const label =
+            await fetchJSON(
+                "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=" +
+                encodeURIComponent(qid) +
+                "&props=labels&languages=en&format=json&origin=*",
+                10000
+            );
+
+
+        return (
+            "Government structure: " +
+            (
+                label?.entities?.[qid]?.labels?.en?.value ||
+                "Available in Wikidata."
+            )
+        );
+
+    }catch(e){
+
+        return "Political profile could not be loaded right now.";
+
+    }
+
+}
+
+
+function setGrid(id, entries){
+
+    $(id).innerHTML =
+        entries
+            .map(
+                ([k,v]) =>
+                    `
+                    <div class="kv">
+
+                        <span>
+                            ${esc(k)}
+                        </span>
+
+                        <b>
+                            ${esc(v)}
+                        </b>
+
+                    </div>
+                    `
+            )
+            .join("");
+
+}
+
+
+async function selectCountry(c){
+
+    state.selected = c;
+
+
+    $("panel")
+        .classList
+        .add("open");
+
+
+    $("panelName").textContent =
+        c.commonName;
+
+
+    $("panelEyebrow").textContent =
+        (
+            c.region ||
+            c.continents?.[0] ||
+            "COUNTRY"
+        ).toUpperCase();
+
+
+    $("panelFlag").src =
+        flagURL(c);
+
+
+    $("pop").textContent =
+        fmtNum(c.population);
+
+
+    $("area").textContent =
+        fmtArea(c.area);
+
+
+    const currencies =
+        c.currencies
+            ? Object.values(
+                c.currencies
+            )
+            .map(x => x.name)
+            .join(", ")
+            : "—";
+
+
+    const langs =
+        c.languages
+            ? Object.values(
+                c.languages
+            )
+            .slice(0,5)
+            .join(", ")
+            : "—";
+
+
+    const capital =
+        Array.isArray(c.capital)
+            ? c.capital.join(", ")
+            : "—";
+
+
+    const borders =
+        Array.isArray(c.borders)
+            ? c.borders.length
+            : 0;
+
+
+    const density =
+        Number(c.population) > 0 &&
+        Number(c.area) > 0
+            ? (
+                Number(c.population) /
+                Number(c.area)
+            ).toFixed(1) +
+              " / km²"
+            : "—";
+
+
+    setGrid(
+        "geoGrid",
+        [
+            ["Capital",capital],
+            ["Region",c.region || "—"],
+            ["Subregion",c.subregion || "—"],
+            [
+                "Continent",
+                c.continents?.join(", ") || "—"
+            ],
+            ["Density",density],
+            ["Currencies",currencies],
+            ["Languages",langs],
+            [
+                "UN member",
+                c.unMember ? "Yes" : "No"
+            ],
+            [
+                "Landlocked",
+                c.landlocked ? "Yes" : "No"
+            ],
+            ["Borders",String(borders)],
+            [
+                "Time zones",
+                c.timezones?.length
+                    ? c.timezones.length
+                    : "—"
+            ]
+        ]
+    );
+
+
+    [
+        "gdp",
+        "gdppc",
+        "growth",
+        "inflation",
+        "life",
+        "unemployment",
+        "internet",
+        "trade"
+    ].forEach(
+        id =>
+            $(id).textContent =
+                "Loading…"
+    );
+
+
+    $("politics").textContent =
+        "Loading political profile…";
+
+
+    $("overview").textContent =
+        "Loading country overview…";
+
+
+    if(state.globe){
+
+        state.globe.polygonAltitude(
+            d =>
+                state.featureCountry.get(d) === c
+                    ? 0.045
+                    : 0.008
+        );
+
+
+        state.globe.pointOfView(
+            {
+                lat:
+                    c.latlng?.[0] || 0,
+
+                lng:
+                    c.latlng?.[1] || 0,
+
+                altitude:1.65
+            },
+            900
+        );
+
+    }
+
+
+    applyFlag(c);
+
+
+    const [
+        wb,
+        overview,
+        politics
+    ] =
+        await Promise.all(
+            [
+                loadWorldBank(c),
+                loadOverview(c),
+                loadPolitics(c)
+            ]
+        );
+
+
+    $("gdp").textContent =
+        fmtMoney(
+            wb["NY.GDP.MKTP.CD"]
+        );
+
+
+    $("gdppc").textContent =
+        fmtMoney(
+            wb["NY.GDP.PCAP.CD"]
+        );
+
+
+    $("growth").textContent =
+        fmtPct(
+            wb["NY.GDP.MKTP.KD.ZG"]
+        );
+
+
+    $("inflation").textContent =
+        fmtPct(
+            wb["FP.CPI.TOTL.ZG"]
+        );
+
+
+    $("life").textContent =
+        Number.isFinite(
+            Number(
+                wb["SP.DYN.LE00.IN"]
+            )
+        )
+            ? Number(
+                wb["SP.DYN.LE00.IN"]
+            ).toFixed(1) +
+              " years"
+            : "—";
+
+
+    $("unemployment").textContent =
+        fmtPct(
+            wb["SL.UEM.TOTL.ZS"]
+        );
+
+
+    $("internet").textContent =
+        fmtPct(
+            wb["IT.NET.USER.ZS"]
+        );
+
+
+    $("trade").textContent =
+        fmtPct(
+            wb["NE.TRD.GNFS.ZS"]
+        );
+
+
+    $("politics").textContent =
+        politics ||
+        "Political profile unavailable.";
+
+
+    $("overview").textContent =
+        overview ||
+        "No overview text was available from the public knowledge source.";
+
+}
+
+
+function closePanel(){
+
+    $("panel")
+        .classList
+        .remove("open");
+
+
+    state.selected = null;
+
+
+    if(state.globe){
+
+        state.globe.polygonAltitude(
+            () => 0.008
+        );
+
+    }
+
+}
+
+
+function resetView(){
+
+    closePanel();
+
+
+    if(state.globe){
+
+        state.globe.pointOfView(
+            {
+                lat:20,
+                lng:0,
+                altitude:2.25
+            },
+            900
+        );
+
+    }
+
+}
+
+
+function openCompare(){
+
+    if(!state.selected){
+        return;
+    }
+
+
+    state.activeCompare =
+        state.selected;
+
+
+    $("modal")
+        .classList
+        .add("open");
+
+
+    $("picker").style.display =
+        "";
+
+
+    $("countryList").style.display =
+        "grid";
+
+
+    $("compareView")
+        .classList
+        .remove("show");
+
+
+    renderCountryList("");
+
+
+    $("compareSearch").focus();
+
+}
+
+
+function renderCountryList(query){
+
+    const q =
+        query
+            .trim()
+            .toLowerCase();
+
+
+    const list =
+        state.countries
+            .filter(
+                c =>
+                    c.cca3 !==
+                    state.activeCompare?.cca3 &&
+                    (
+                        !q ||
+                        c.commonName
+                            .toLowerCase()
+                            .includes(q) ||
+                        (
+                            c.region ||
+                            ""
+                        )
+                            .toLowerCase()
+                            .includes(q)
+                    )
+            )
+            .sort(
+                (a,b) =>
+                    a.commonName
+                        .localeCompare(
+                            b.commonName
+                        )
+            )
+            .slice(
+                0,
+                180
+            );
+
+
+    $("countryList").innerHTML =
+        list
+            .map(
+                c =>
+                    `
+                    <button
+                        class="countryOption"
+                        data-iso="${esc(c.cca3)}"
+                    >
+
+                        <img
+                            src="${esc(flagURL(c))}"
+                            alt=""
+                        >
+
+                        <div>
+
+                            <b>
+                                ${esc(c.commonName)}
+                            </b>
+
+                            <span>
+                                ${esc(
+                                    c.region ||
+                                    c.continents?.[0] ||
+                                    ""
+                                )}
+                            </span>
+
+                        </div>
+
+                    </button>
+                    `
+            )
+            .join("");
+
+
+    document
+        .querySelectorAll(
+            ".countryOption"
+        )
+        .forEach(
+            btn =>
+                btn.addEventListener(
+                    "click",
+                    () =>
+                        showComparison(
+                            state.by3.get(
+                                btn.dataset.iso
+                            )
+                        )
+                )
+        );
+
+}
+
+
+async function showComparison(other){
+
+    if(
+        !other ||
+        !state.activeCompare
+    ){
+
+        return;
+
+    }
+
+
+    const a =
+        state.activeCompare;
+
+    const b =
+        other;
+
+
+    $("picker").style.display =
+        "none";
+
+
+    $("countryList").style.display =
+        "none";
+
+
+    $("compareView")
+        .classList
+        .add("show");
+
+
+    $("compareView").innerHTML =
+        `
+        <div class="compareGrid">
+
+            <div class="head">
+                Metric
+            </div>
+
+            <div class="head">
+                ${esc(a.commonName)}
+            </div>
+
+            <div class="head">
+                ${esc(b.commonName)}
+            </div>
+
+        </div>
+        `;
+
+
+    const grid =
+        $("compareView")
+            .querySelector(
+                ".compareGrid"
+            );
+
+
+    const rows = [
+
+        [
+            "Population",
+            fmtNum(a.population),
+            fmtNum(b.population)
+        ],
+
+        [
+            "Area",
+            fmtArea(a.area),
+            fmtArea(b.area)
+        ],
+
+        [
+            "Region",
+            a.region || "—",
+            b.region || "—"
+        ],
+
+        [
+            "Capital",
+            a.capital?.join?.(", ") || "—",
+            b.capital?.join?.(", ") || "—"
+        ],
+
+        [
+            "UN member",
+            a.unMember ? "Yes" : "No",
+            b.unMember ? "Yes" : "No"
+        ],
+
+        [
+            "Landlocked",
+            a.landlocked ? "Yes" : "No",
+            b.landlocked ? "Yes" : "No"
+        ],
+
+        [
+            "Borders",
+            String(a.borders?.length || 0),
+            String(b.borders?.length || 0)
+        ],
+
+        [
+            "Currencies",
+            a.currencies
+                ? Object.values(a.currencies)
+                    .map(x => x.name)
+                    .join(", ")
+                : "—",
+            b.currencies
+                ? Object.values(b.currencies)
+                    .map(x => x.name)
+                    .join(", ")
+                : "—"
+        ],
+
+        [
+            "Languages",
+            a.languages
+                ? Object.values(a.languages)
+                    .slice(0,4)
+                    .join(", ")
+                : "—",
+            b.languages
+                ? Object.values(b.languages)
+                    .slice(0,4)
+                    .join(", ")
+                : "—"
+        ]
+
+    ];
+
+
+    const [
+        wa,
+        wb
+    ] =
+        await Promise.all(
+            [
+                loadWorldBank(a),
+                loadWorldBank(b)
+            ]
+        );
+
+
+    rows.push(
+        [
+            "GDP",
+            fmtMoney(
+                wa["NY.GDP.MKTP.CD"]
+            ),
+            fmtMoney(
+                wb["NY.GDP.MKTP.CD"]
+            )
+        ]
+    );
+
+
+    rows.push(
+        [
+            "GDP / capita",
+            fmtMoney(
+                wa["NY.GDP.PCAP.CD"]
+            ),
+            fmtMoney(
+                wb["NY.GDP.PCAP.CD"]
+            )
+        ]
+    );
+
+
+    rows.push(
+        [
+            "GDP growth",
+            fmtPct(
+                wa["NY.GDP.MKTP.KD.ZG"]
+            ),
+            fmtPct(
+                wb["NY.GDP.MKTP.KD.ZG"]
+            )
+        ]
+    );
+
+
+    rows.push(
+        [
+            "Inflation",
+            fmtPct(
+                wa["FP.CPI.TOTL.ZG"]
+            ),
+            fmtPct(
+                wb["FP.CPI.TOTL.ZG"]
+            )
+        ]
+    );
+
+
+    rows.push(
+        [
+            "Unemployment",
+            fmtPct(
+                wa["SL.UEM.TOTL.ZS"]
+            ),
+            fmtPct(
+                wb["SL.UEM.TOTL.ZS"]
+            )
+        ]
+    );
+
+
+    rows.push(
+        [
+            "Life expectancy",
+
+            Number.isFinite(
+                Number(
+                    wa["SP.DYN.LE00.IN"]
+                )
+            )
+                ? Number(
+                    wa["SP.DYN.LE00.IN"]
+                ).toFixed(1) +
+                  " years"
+                : "—",
+
+            Number.isFinite(
+                Number(
+                    wb["SP.DYN.LE00.IN"]
+                )
+            )
+                ? Number(
+                    wb["SP.DYN.LE00.IN"]
+                ).toFixed(1) +
+                  " years"
+                : "—"
+
+        ]
+    );
+
+
+    rows.push(
+        [
+            "Internet users",
+            fmtPct(
+                wa["IT.NET.USER.ZS"]
+            ),
+            fmtPct(
+                wb["IT.NET.USER.ZS"]
+            )
+        ]
+    );
+
+
+    rows.forEach(
+        r =>
+            grid.insertAdjacentHTML(
+                "beforeend",
+                `
+                <div class="metric">
+                    ${esc(r[0])}
+                </div>
+
+                <div>
+                    ${esc(r[1])}
+                </div>
+
+                <div>
+                    ${esc(r[2])}
+                </div>
+                `
+            )
+    );
+
+}
+
+
+$("closePanel").onclick =
+    closePanel;
+
+
+$("resetBtn").onclick =
+    resetView;
+
+
+$("compareBtn").onclick =
+    openCompare;
+
+
+$("modalClose").onclick =
+    () =>
+        $("modal")
+            .classList
+            .remove("open");
+
+
+$("modal").addEventListener(
+    "click",
+    e => {
+
+        if(
+            e.target ===
+            $("modal")
+        ){
+
+            $("modal")
+                .classList
+                .remove("open");
+
+        }
+
+    }
+);
+
+
+$("compareSearch")
+    .addEventListener(
+        "input",
+        e =>
+            renderCountryList(
+                e.target.value
+            )
+    );
+
+
+$("search")
+    .addEventListener(
+        "input",
+        e => {
+
+            const q =
+                e.target.value
+                    .trim()
+                    .toLowerCase();
+
+
+            if(!q){
+
+                return;
+
+            }
+
+
+            const exact =
+                state.countries.find(
+                    c =>
+                        c.commonName
+                            .toLowerCase() ===
+                        q
+                );
+
+
+            if(exact){
+
+                selectCountry(exact);
+
+            }
+
+        }
+    );
+
+
+document.addEventListener(
+    "keydown",
+    e => {
+
+        if(
+            e.key === "/" &&
+            document.activeElement !==
+                $("search") &&
+            document.activeElement !==
+                $("compareSearch")
+        ){
+
+            e.preventDefault();
+
+            $("search").focus();
+
+        }
+
+
+        if(e.key === "Escape"){
+
+            $("modal")
+                .classList
+                .remove("open");
+
+            closePanel();
+
+        }
+
+    }
+);
+
+
+(async function init(){
+
+    try{
+
+        await loadWorld();
+
+        setLoading(
+            "Rendering interactive globe…"
+        );
+
+        makeGlobe();
+
+        setStatus(
+            "LIVE DATA · " +
+            state.countries.length +
+            " COUNTRIES"
+        );
+
+        $("loading")
+            .classList
+            .add("hidden");
+
+    }catch(e){
+
+        console.error(e);
+
+        showError(
+            "The public geography sources could not be loaded. " +
+            "This version automatically tries multiple map providers, " +
+            "but your browser or network may be blocking them. " +
+            "Details: " +
+            (e?.message || "unknown error")
+        );
+
+    }
+
+})();
+
+
+})();
+
+</script>
+
+</body>
+</html>
